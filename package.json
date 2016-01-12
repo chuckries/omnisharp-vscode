@@ -8,10 +8,10 @@
     "publisher": "jrieken",
     "main": "./out/omnisharpMain",
     "scripts": {
-        "postinstall": "gulp omnisharp && tsc"
+        "postinstall": "node ./node_modules/vscode/bin/install && gulp omnisharp && tsc"
     },
     "dependencies": {
-        "vscode": "^0.10.1",
+        "vscode": "next",
         "run-in-terminal": "*",
         "semver": "*"
     },
@@ -26,7 +26,7 @@
         "typescript": "^1.7.3"
     },
     "engines": {
-        "vscode": "^0.10.1"
+        "vscode": "*"
     },
     "activationEvents": [
         "onLanguage:csharp",

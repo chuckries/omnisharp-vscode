@@ -14,11 +14,18 @@ export default class CSharpDefinitionProvider extends AbstractSupport implements
 
 	public provideDefinition(document: TextDocument, position: Position, token: CancellationToken): Promise<Location> {
 
-		let req = createRequest(document, position);
+        let req = createRequest<Protocol.GotoDefinitionRequest>(document, position);
+        req.WantMetadata = true;
 
-		return this._server.makeRequest<Protocol.ResourceLocation>(Protocol.GoToDefinition, req, token).then(value => {
-			if (value && value.FileName) {
-				return toLocation(value);
+        return this._server.makeRequest<Protocol.GotoDefinitionResponse>(Protocol.GoToDefinition, req, token).then(value => {
+            if (!value) {
+                return;
+            } else if (value.FileName) {
+                return toLocation(value);
+            } else if (value.MetadataSource) {
+                const path = `${value.MetadataSource.ProjectName}/${value.MetadataSource.AssemblyName}/${value.MetadataSource.TypeName}`;
+                const query = new Buffer(JSON.stringify(value.MetadataSource)).toString('base64');
+                return new Location(Uri.parse(`omnisharp://metadata/${path}.cs?${query}`), new Position(0, 0));
 			}
 		});
 	}

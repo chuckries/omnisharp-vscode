@@ -18,12 +18,13 @@ import CompletionItemProvider from './features/completionItemProvider';
 import WorkspaceSymbolProvider from './features/workspaceSymbolProvider';
 import reportDiagnostics,{Advisor} from './features/diagnosticsProvider';
 import SignatureHelpProvider from './features/signatureHelpProvider';
+import OmnisharpTextContentProvider from './features/textContentProvider';
 import registerCommands from './features/commands';
 import {StdioOmnisharpServer} from './omnisharpServer';
 import forwardChanges from './features/changeForwarding';
 import reportStatus from './features/omnisharpStatus';
 import findLaunchTargets from './launchTargetFinder';
-import {Disposable, ExtensionContext, DocumentSelector, languages, extensions} from 'vscode';
+import {Disposable, ExtensionContext, DocumentSelector, languages, extensions, workspace} from 'vscode';
 
 export function activate(context: ExtensionContext): any {
 
@@ -39,6 +40,7 @@ export function activate(context: ExtensionContext): any {
 
 	disposables.push(server.onServerStart(() => {
 		// register language feature provider on start
+        localDisposables.push(workspace.registerTextDocumentContentProvider('omnisharp', new OmnisharpTextContentProvider(server)));
 		localDisposables.push(languages.registerDefinitionProvider(_selector, new DefinitionProvider(server)));
 		localDisposables.push(languages.registerCodeLensProvider(_selector, new CodeLensProvider(server)));
 		localDisposables.push(languages.registerDocumentHighlightProvider(_selector, new DocumentHighlightProvider(server)));
@@ -55,7 +57,7 @@ export function activate(context: ExtensionContext): any {
 		localDisposables.push(codeActionProvider);
 		localDisposables.push(languages.registerCodeActionsProvider(_selector, codeActionProvider));
 		localDisposables.push(reportDiagnostics(server, advisor));
-		localDisposables.push(forwardChanges(server));
+        localDisposables.push(forwardChanges(server));
 	}));
 
 	disposables.push(server.onServerStop(() => {

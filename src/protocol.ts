@@ -45,6 +45,8 @@ export var FilesChanged = '/filesChanged';
 
 export var SignatureHelp = '/signatureHelp';
 
+export var Metadata = "/metadata";
+
 export interface Request {
 	Filename: string;
 	Line?: number;
@@ -115,6 +117,32 @@ export interface FormatRangeRequest extends Request {
 
 export interface FormatRangeResponse {
 	Changes: TextChange[];
+}
+
+export interface GotoDefinitionRequest extends Request {
+    Timeout?: number;
+    WantMetadata: boolean;
+}
+
+export interface GotoDefinitionResponse extends ResourceLocation {
+    MetadataSource: MetadataSource;
+}
+
+export interface MetadataSource {
+    AssemblyName: string;
+    TypeName: string;
+    ProjectName: string;
+    VersionNumber: string;
+    Language: string;
+}
+
+export interface MetadataRequest extends MetadataSource {
+    Timeout?: number;
+}
+
+export interface MetadataResponse {
+    SourceName: string;
+    Source: string;
 }
 
 export interface ResourceLocation {
