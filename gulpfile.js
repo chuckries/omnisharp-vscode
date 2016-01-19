@@ -11,7 +11,7 @@ var path = require('path');
 
 tmp.setGracefulCleanup();
 
-function downloadOmnisharp(version) {
+function downloadOmnisharp(version) {  
 	var result = es.through();
 
 	function onError(err) {
@@ -27,10 +27,25 @@ function downloadOmnisharp(version) {
 		if (err) { return onError(err); }
 		if (!releases.length) { return onError(new Error('Release not found')); }
 		if (!releases[0].assets.length) { return onError(new Error('Assets not found')); }
+        
+        var asset;
+        
+        for (var i = 0; i < releases.length; i++) {
+            var r = releases[i];
+            
+            for (var j = 0; j < r.assets.length; j++) {
+                if (r.assets[j].name.indexOf('omnisharp-clr-win-x86') >= 0)
+                {
+                    asset = r.assets[j];
+                }
+            }
+        }
+        
+        console.info('downloading', asset.name, version, '...')
 
-		repo.downloadAsset(releases[0].assets[0], function (err, istream) {
+		repo.downloadAsset(asset, function (err, istream) {
 			if (err) { return onError(err); }
-
+            
 			tmp.file(function (err, tmpPath, fd, cleanupCallback) {
 				if (err) { return onError(err); }
 
@@ -53,8 +68,8 @@ gulp.task('omnisharp:clean', function () {
 });
 
 gulp.task('omnisharp:fetch', ['omnisharp:clean'], function () {
-	return downloadOmnisharp('v1.6.7.9')
-		.pipe(decompress({strip: 1}))
+	return downloadOmnisharp('v1.7.0')
+		.pipe(decompress())
 		.pipe(gulp.dest('bin'));
 });
 
@@ -84,37 +99,4 @@ gulp.task('tslint', function () {
 	}))
 });
 
-gulp.task('omnisharp:fixscripts', ['omnisharp:fetch'], function () {
-
-	var _fixes = Object.create(null);
-	_fixes['./bin/omnisharp.cmd'] = '@"%~dp0packages\\dnx-clr-win-x86.1.0.0-beta4\\bin\\dnx.exe" "%~dp0packages\\OmniSharp\\1.0.0\\root" run %*';
-	_fixes['./bin/omnisharp'] = '#!/bin/bash\n\
-SOURCE="${BASH_SOURCE[0]}"\n\
-while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink\n\
-  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"\n\
-  SOURCE="$(readlink "$SOURCE")"\n\
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located\n\
-done\n\
-DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"\n\
-export SET DNX_APPBASE="$DIR/packages/OmniSharp/1.0.0/root"\n\
-export PATH=/usr/local/bin:/Library/Frameworks/Mono.framework/Commands:$PATH # this is required for the users of the Homebrew Mono package\n\
-exec "$DIR/packages/dnx-mono.1.0.0-beta4/bin/dnx" "$DNX_APPBASE" run "$@"\n\
-\n';
-
-	var promises = Object.keys(_fixes).map(function (key) {
-		return new Promise(function(resolve, reject) {
-			fs.writeFile(path.join(__dirname, key), _fixes[key], function (err) {
-				if (err) {
-					reject(err);
-				} else {
-					resolve();
-				}
-			})
-		});
-	});
-
-	return Promise.all(promises)
-});
-
-
-gulp.task('omnisharp', ['omnisharp:fixscripts']);
+gulp.task('omnisharp', ['omnisharp:fetch']);

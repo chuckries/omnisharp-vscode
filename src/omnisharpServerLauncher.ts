@@ -105,7 +105,7 @@ function getOmnisharpPath(): Promise<string> {
 
 	} else {
 		// bundled version of Omnisharp
-		pathCandidate = join(__dirname, '../bin/omnisharp')
+		pathCandidate = join(__dirname, '../bin/run')
 		if (isWindows) {
 			pathCandidate += '.cmd';
 		}
