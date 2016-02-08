@@ -13,7 +13,7 @@ export function getOmnisharpDefaultInstallDirectory() : string {
     return path.join(__dirname, '../.omnisharp');
 }
 
-export function getOmnisharpRunPath(): string {
+export function getOmnisharpRunPath(): Promise<string> {
     var fileName = process.platform === 'win32' ? 'run.cmd' : 'run';
     
     // look for VS Code configuration setting
@@ -21,7 +21,7 @@ export function getOmnisharpRunPath(): string {
     if (omnisharpConfig) {
         var fullPath = path.join(omnisharpConfig, fileName);
         if (fs.existsSync(fullPath)) {
-            return fullPath;
+            return Promise.resolve(fullPath);
         }
     }
     
@@ -31,7 +31,7 @@ export function getOmnisharpRunPath(): string {
         var fullPath = path.join(omnisharpEnv, fileName);
         if (fs.existsSync(fullPath)) {
             console.warn('[deprecated] use workspace or use settings with "csharp.omnisharp":"/path/to/omnisharp"');
-            return fullPath;
+            return Promise.resolve(fullPath);
         }
     }
     
@@ -40,9 +40,11 @@ export function getOmnisharpRunPath(): string {
     if (installDirectory) {
         var fullPath = path.join(installDirectory, fileName);
         if (fs.existsSync(fullPath)) {
-            return fullPath;
+            return Promise.resolve(fullPath);
         }
     }
     
-    return null;
+    return new Promise<string>((_, reject) => {
+        reject("OmniSharp is not installed");
+    });
 }

@@ -10,7 +10,6 @@ import {dnxRestoreForProject} from './commands';
 import {basename} from 'path';
 import * as proto from '../protocol';
 
-
 export default function reportStatus(server: OmnisharpServer) {
 	return vscode.Disposable.from(
 		reportServerStatus(server),
@@ -87,6 +86,13 @@ export function reportDocumentStatus(server: OmnisharpServer): vscode.Disposable
 		defaultStatus.text = '$(flame) Select project';
 		defaultStatus.command = 'o.pickProjectAndStart';
 		defaultStatus.color = 'rgb(90, 218, 90)';
+		render();
+	}));
+
+	disposables.push(server.onOmnisharpNotInstalled(e => {
+		defaultStatus.text = '$(flame) OmniSharp not installed';
+		defaultStatus.command = 'o.showOutput';
+		defaultStatus.color = 'yellow';
 		render();
 	}));
 

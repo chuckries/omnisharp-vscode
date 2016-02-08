@@ -11,15 +11,16 @@ import {request} from 'http';
 import {dirname} from 'path';
 import {ReadLine, createInterface} from 'readline';
 import omnisharpLauncher from './omnisharpServerLauncher';
+import {getOmnisharpRunPath} from './omnisharpPath';
 import {Disposable, CancellationToken, OutputChannel, workspace, window} from 'vscode';
 import {ErrorMessage, UnresolvedDependenciesMessage, MSBuildProjectDiagnostics, ProjectInformationResponse} from './protocol';
 import getLaunchTargets, {LaunchTarget} from './launchTargetFinder';
 
-
 enum ServerState {
+    NotInstalled,
 	Starting,
 	Started,
-	Stopped
+	Stopped,
 }
 
 interface Request {
@@ -136,6 +137,10 @@ export abstract class OmnisharpServer {
 	public onOmnisharpStart(listener: () => any) {
 		return this._addListener('started', listener);
 	}
+    
+    public onOmnisharpNotInstalled(listener: (e: string) => any) {
+        return this._addListener('NotInstalled', listener);
+    }
 
 	private _addListener(event: string, listener: (e: any) => any, thisArg?: any): Disposable {
 		listener = thisArg ? listener.bind(thisArg) : listener;
@@ -157,28 +162,35 @@ export abstract class OmnisharpServer {
 	}
 
 	private _doStart(solutionPath: string): Promise<void> {
+        
+        return getOmnisharpRunPath().then(
+            runPath => {
+                this._setState(ServerState.Starting);
+                this._solutionPath = solutionPath;
 
-		this._setState(ServerState.Starting);
-		this._solutionPath = solutionPath;
+                var cwd = dirname(solutionPath);
+                var argv = ['-s', solutionPath, '--hostPID', process.pid.toString(), 'dnx:enablePackageRestore=false'].concat(this._extraArgv);
 
-		var cwd = dirname(solutionPath),
-			argv = ['-s', solutionPath, '--hostPID', process.pid.toString(), 'dnx:enablePackageRestore=false'].concat(this._extraArgv);
+                this._fireEvent('stdout', `[INFO] Starting OmniSharp at '${solutionPath}'...\n`);
+                this._fireEvent('BeforeServerStart', solutionPath);
 
-		this._fireEvent('stdout', `[INFO] Starting OmniSharp at '${solutionPath}'...\n`);
-		this._fireEvent('BeforeServerStart', solutionPath);
-
-		return omnisharpLauncher(cwd, argv).then(value => {
-			this._serverProcess = value.process;
-            this._fireEvent('stdout', `[INFO] Started OmniSharp from '${value.command}' with process id ${value.process.pid}...\n`);
-            this._fireEvent('ServerStart', solutionPath);
-			this._setState(ServerState.Started);
-			return this._doConnect();
-		}).then(_ => {
-			this._processQueue();
-		}, err => {
-			this._fireEvent('ServerError', err);
-			throw err;
-		});
+                return omnisharpLauncher(cwd, argv).then(value => {
+                    this._serverProcess = value.process;
+                    this._fireEvent('stdout', `[INFO] Started OmniSharp from '${value.command}' with process id ${value.process.pid}...\n`);
+                    this._fireEvent('ServerStart', solutionPath);
+                    this._setState(ServerState.Started);
+                    return this._doConnect();
+                }).then(_ => {
+                    this._processQueue();
+                }, err => {
+                    this._fireEvent('ServerError', err);
+                    throw err;
+                });                
+            },
+        err => {
+            this._setState(ServerState.NotInstalled);
+            this._fireEvent('NotInstalled', err);
+        });
 	}
 
 	protected abstract _doConnect(): Promise<OmnisharpServer>;
