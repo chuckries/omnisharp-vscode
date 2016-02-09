@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import {OmnisharpServer} from '../omnisharpServer';
+import {promptToInstall} from '../omnisharpInstall';
 import {dnxRestoreForProject} from './commands';
 import {basename} from 'path';
 import * as proto from '../protocol';
@@ -90,8 +91,12 @@ export function reportDocumentStatus(server: OmnisharpServer): vscode.Disposable
 	}));
 
 	disposables.push(server.onOmnisharpNotInstalled(e => {
+        vscode.commands.registerCommand("csharp.promptToInstallOmniSharp", () => {
+            promptToInstall(server);
+        });
+        
 		defaultStatus.text = '$(flame) OmniSharp not installed';
-		defaultStatus.command = 'o.showOutput';
+		defaultStatus.command = 'csharp.promptToInstallOmniSharp';
 		defaultStatus.color = 'yellow';
 		render();
 	}));
